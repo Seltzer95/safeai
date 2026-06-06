@@ -23,9 +23,11 @@ self.onmessage = async (e: MessageEvent) => {
 
     try {
       const { pipeline: createPipeline, env } = await import('@huggingface/transformers')
-      env.allowLocalModels = false
+      env.allowLocalModels = true
+      env.allowRemoteModels = false
+      env.localModelPath = '/models/'
 
-      const MODEL_ID = 'Xenova/all-MiniLM-L6-v2'
+      const MODEL_ID = 'all-MiniLM-L6-v2'
       const fileProgress = new Map<string, number>()
 
       function onProgress(p: { status: string; file?: string; progress?: number }) {
@@ -46,7 +48,7 @@ self.onmessage = async (e: MessageEvent) => {
         console.log('[embedding-worker] trying WebGPU...')
         pipeline = await createPipeline('feature-extraction', MODEL_ID, {
           device: 'webgpu',
-          dtype: 'fp32',
+          dtype: 'q8',
           progress_callback: onProgress,
         })
         backend = 'webgpu'
@@ -56,7 +58,7 @@ self.onmessage = async (e: MessageEvent) => {
         fileProgress.clear()
         pipeline = await createPipeline('feature-extraction', MODEL_ID, {
           device: 'wasm',
-          dtype: 'fp32',
+          dtype: 'q8',
           progress_callback: onProgress,
         })
       }

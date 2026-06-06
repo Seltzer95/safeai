@@ -10,6 +10,9 @@ export default defineConfig({
       '~': path.resolve(import.meta.dirname, './app'),
     },
   },
+  optimizeDeps: {
+    exclude: ['@huggingface/transformers'],
+  },
   plugins: [
     tanstackStart({
       srcDirectory: './app',

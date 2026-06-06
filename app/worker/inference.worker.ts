@@ -35,10 +35,18 @@ async function loadModel(onProgress: ProgressCallback): Promise<BackendName> {
   const { pipeline: createPipeline, env } = await import('@huggingface/transformers')
   console.log('[inference-worker] transformers imported')
 
-  // Disable local model cache for the worker context (use HF CDN)
-  env.allowLocalModels = false
+  // Serve model from public/models — no HF hub fetches
+  env.allowLocalModels = true
+  env.allowRemoteModels = false
+  // Use a root-relative path, NOT a full http:// URL.
+  // transformers.js skips the local-file existence check when localModelPath is an
+  // absolute http URL (because isValidUrl returns true → the "local FS" branch is
+  // bypassed). Using '/models/' makes new URL('/models/...') throw, so isValidUrl
+  // returns false and the branch runs — enabling get_tokenizer_files to detect the
+  // tokenizer files via fetch and set hasTokenizer=true.
+  env.localModelPath = '/models/'
 
-  const MODEL_ID = 'Xenova/all-MiniLM-L6-v2'
+  const MODEL_ID = 'all-MiniLM-L6-v2'
 
   // Track per-file download progress and merge into a single 0-100 value.
   // The progress_callback fires for each file individually.
@@ -69,7 +77,7 @@ async function loadModel(onProgress: ProgressCallback): Promise<BackendName> {
   try {
     pipeline = await createPipeline('feature-extraction', MODEL_ID, {
       device: 'webgpu',
-      dtype: 'fp32',
+      dtype: 'q8',
       progress_callback: progressCallback,
     })
     activeBackend = 'webgpu'
@@ -85,7 +93,7 @@ async function loadModel(onProgress: ProgressCallback): Promise<BackendName> {
   console.log('[inference-worker] trying WASM backend...')
   pipeline = await createPipeline('feature-extraction', MODEL_ID, {
     device: 'wasm',
-    dtype: 'fp32',
+    dtype: 'q8',
     progress_callback: progressCallback,
   })
   activeBackend = 'wasm'
