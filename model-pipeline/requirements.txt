@@ -1,0 +1,23 @@
+# model-pipeline dependencies
+# Tested target: Python 3.12 (Intel Mac x86_64)
+# PyTorch 2.2.2 is the last release with Intel-Mac wheels on PyPI.
+# NumPy 2.0 support requires torch>=2.3; pin below 2.0 to match torch 2.2.x.
+
+# ── Model loading & ONNX export ───────────────────────────────────────────────
+# transformers upper bound: optimum 1.x is tested up to ~4.57; raise once torch>=2.4 is available
+transformers>=4.44.0,<4.58.0
+# optimum-onnx 0.1.0 requires optimum~=2.1.0, which uses torch.rms_norm (added in torch 2.4).
+# Intel-Mac is stuck at torch 2.2.2, so optimum 2.x is incompatible. Use optimum 1.x instead.
+optimum[onnxruntime]>=1.21.0,<2.0.0
+
+# ── ONNX runtime & quantisation tools ────────────────────────────────────────
+onnxruntime>=1.19.0        # MatMul4BitsQuantizer (int4) requires ≥1.16
+onnx>=1.16.0
+
+# ── PyTorch (reference inference for validation only) ────────────────────────
+# Intel-Mac (x86_64): last PyPI wheel is 2.2.2; no wheel exists for ≥2.3.
+torch>=2.2.0
+
+# ── Numerics & display ────────────────────────────────────────────────────────
+numpy>=1.24.0,<2.0         # torch 2.2.x requires NumPy 1.x (2.0 ABI break)
+tabulate>=0.9.0
