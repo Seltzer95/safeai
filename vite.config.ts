@@ -14,6 +14,19 @@ export default defineConfig({
     exclude: ['@huggingface/transformers'],
   },
   plugins: [
+    // Serve model files with long-lived HTTP cache headers so the browser
+    // won't re-download them on refresh (works independently of the Cache API).
+    {
+      name: 'model-cache-headers',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url?.startsWith('/models/')) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+          }
+          next()
+        })
+      },
+    },
     tanstackStart({
       srcDirectory: './app',
       router: {

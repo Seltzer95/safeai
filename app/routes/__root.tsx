@@ -17,6 +17,11 @@ export const Route = createRootRoute({
 })
 
 function RootComponent(): ReactNode {
+  // Server-side only: timestamp so we know when React render actually begins
+  // relative to the [ssr] → log in ssr.tsx.
+  if (typeof document === 'undefined') {
+    console.log('[__root] RootComponent SSR render start')
+  }
   return (
     <html lang="en">
       <head>

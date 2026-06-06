@@ -72,15 +72,25 @@ export function useEmbedding(): UseEmbeddingReturn {
     setProgress(0)
     setError(null)
 
+    // Backend override: set via browser console to force a specific backend, e.g.:
+    //   localStorage.setItem('SAFEAI_BACKEND', 'wasm')  // force WASM (faster on Intel Mac)
+    //   localStorage.removeItem('SAFEAI_BACKEND')        // revert to auto
+    const backendOverride =
+      (typeof localStorage !== 'undefined' ? (localStorage.getItem('SAFEAI_BACKEND') as BackendName | null) : null) ??
+      undefined
+    if (backendOverride) {
+      console.log('[useEmbedding] backend override from localStorage:', backendOverride)
+    }
+
     try {
       const api = getApi()
       console.log('[useEmbedding] calling api.loadModel...')
       const backend = await api.loadModel(
         // Comlink.proxy wraps the callback so it crosses the worker boundary
         Comlink.proxy((p: number) => {
-          console.log('[useEmbedding] progress update:', p)
           setProgress(p)
         }),
+        backendOverride,
       )
       console.log('[useEmbedding] model ready, backend:', backend)
       setActiveBackend(backend)

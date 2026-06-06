@@ -40,12 +40,15 @@ export function useNotes(): UseNotesReturn {
     setNotes(await listNotes())
   }, [])
 
-  // Load model and hydrate notes once on mount
+  // Hydrate notes immediately; load model lazily after first paint
   useEffect(() => {
     if (didInit.current) return
     didInit.current = true
-    void loadModel()
     void refresh()
+    // Defer model loading so notes render before the worker starts —
+    // notes create/edit/delete are fully usable without waiting for the model.
+    const timer = setTimeout(() => void loadModel(), 0)
+    return () => clearTimeout(timer)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Fire-and-forget: compute embedding for a note and persist it.

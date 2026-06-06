@@ -4,7 +4,15 @@
  * ALL @huggingface/transformers usage is isolated here — never imported on the main thread.
  * Exposed via Comlink; main thread wraps with Comlink.wrap().
  *
- * Backend selection: tries WebGPU first; on any failure, falls back to WASM.
+ * Backend selection: if forceBackend is provided, use that backend only.
+ * Otherwise tries WebGPU first; on any failure, falls back to WASM.
+ *
+ * Timing: logs separate download and backend-init durations so you can tell
+ * whether the slow part is file fetching or GPU graph compilation.
+ *
+ * Force WASM from browser console:
+ *   localStorage.setItem('SAFEAI_BACKEND', 'wasm')  // then refresh
+ *   localStorage.removeItem('SAFEAI_BACKEND')        // revert to auto
  */
 
 import * as Comlink from 'comlink'
@@ -19,11 +27,14 @@ let pipeline: FeatureExtractionPipeline | null = null
 let activeBackend: BackendName | null = null
 
 /**
- * Load the embedding model. Tries WebGPU then falls back to WASM.
- * Calls onProgress(0–100) as model files download.
+ * Load the embedding model.
+ *
+ * @param onProgress  - called with 0–100 as files are fetched
+ * @param forceBackend - 'wasm' skips WebGPU entirely; 'webgpu' skips the WASM fallback;
+ *                       omit for auto (WebGPU → WASM)
  */
-async function loadModel(onProgress: ProgressCallback): Promise<BackendName> {
-  console.log('[inference-worker] loadModel called')
+async function loadModel(onProgress: ProgressCallback, forceBackend?: BackendName): Promise<BackendName> {
+  console.log('[inference-worker] loadModel called, forceBackend:', forceBackend ?? 'auto')
 
   if (pipeline !== null) {
     console.log('[inference-worker] already loaded, returning cached backend:', activeBackend)
@@ -31,26 +42,23 @@ async function loadModel(onProgress: ProgressCallback): Promise<BackendName> {
   }
 
   // Dynamic import keeps @huggingface/transformers out of the main bundle
-  console.log('[inference-worker] importing @huggingface/transformers...')
   const { pipeline: createPipeline, env } = await import('@huggingface/transformers')
-  console.log('[inference-worker] transformers imported')
 
-  // Serve model from public/models — no HF hub fetches
   env.allowLocalModels = true
   env.allowRemoteModels = false
-  // Use a root-relative path, NOT a full http:// URL.
-  // transformers.js skips the local-file existence check when localModelPath is an
-  // absolute http URL (because isValidUrl returns true → the "local FS" branch is
-  // bypassed). Using '/models/' makes new URL('/models/...') throw, so isValidUrl
-  // returns false and the branch runs — enabling get_tokenizer_files to detect the
-  // tokenizer files via fetch and set hasTokenizer=true.
+  env.useBrowserCache = true
   env.localModelPath = '/models/'
 
-  const MODEL_ID = 'all-MiniLM-L6-v2'
+  console.log('[inference-worker] Cache API available:', typeof caches !== 'undefined')
 
-  // Track per-file download progress and merge into a single 0-100 value.
-  // The progress_callback fires for each file individually.
+  const MODEL_ID = 'all-MiniLM-L6-v2'
   const fileProgress = new Map<string, number>()
+
+  // Timing state (reset on each attempt)
+  let t0 = performance.now()
+  let tFilesReady: number | null = null
+  let cachedCount = 0
+  let downloadedCount = 0
 
   function progressCallback(p: {
     status: string
@@ -60,33 +68,83 @@ async function loadModel(onProgress: ProgressCallback): Promise<BackendName> {
     loaded?: number
     total?: number
   }) {
-    console.log('[inference-worker] progress:', p.status, p.file ?? '', p.progress ?? '')
     if (p.status === 'progress' && p.file != null && p.progress != null) {
       fileProgress.set(p.file, p.progress)
       const values = Array.from(fileProgress.values())
       const avg = values.reduce((s, v) => s + v, 0) / values.length
       onProgress(Math.round(avg))
     }
+
+    if (p.status === 'done') {
+      tFilesReady = performance.now()
+      downloadedCount++
+      console.log(`[inference-worker] [download] done: ${p.file} (${downloadedCount} files)`)
+    }
+
+    // transformers.js fires 'cached' instead of 'progress'/'done' when the file
+    // is served from the Cache API — no network request was made.
+    if (p.status === 'cached') {
+      tFilesReady = performance.now()
+      cachedCount++
+      // Count cached file as fully loaded so progress bar advances
+      if (p.file != null) {
+        fileProgress.set(p.file, 100)
+        const values = Array.from(fileProgress.values())
+        const avg = values.reduce((s, v) => s + v, 0) / values.length
+        onProgress(Math.round(avg))
+      }
+      console.log(`[inference-worker] [cache] HIT: ${p.file} (${cachedCount} cached so far)`)
+    }
+
     if (p.status === 'ready') {
       onProgress(100)
     }
   }
 
-  // Try WebGPU first
-  console.log('[inference-worker] trying WebGPU backend...')
-  try {
-    pipeline = await createPipeline('feature-extraction', MODEL_ID, {
-      device: 'webgpu',
-      dtype: 'q8',
-      progress_callback: progressCallback,
-    })
-    activeBackend = 'webgpu'
-    console.info('[inference-worker] backend selected: WebGPU')
-    return 'webgpu'
-  } catch (gpuErr) {
-    console.warn('[inference-worker] WebGPU unavailable, falling back to WASM:', gpuErr)
+  function logTiming(label: string) {
+    const t1 = performance.now()
+    const fetchMs = tFilesReady != null ? tFilesReady - t0 : t1 - t0
+    const initMs = tFilesReady != null ? t1 - tFilesReady : 0
+    console.info(
+      `[inference-worker] [timing/${label}]` +
+        ` files: ${fetchMs.toFixed(0)}ms (${cachedCount} cached, ${downloadedCount} downloaded),` +
+        ` backend-init: ${initMs.toFixed(0)}ms,` +
+        ` total: ${(t1 - t0).toFixed(0)}ms`,
+    )
+  }
+
+  function resetAttempt() {
     pipeline = null
     fileProgress.clear()
+    t0 = performance.now()
+    tFilesReady = null
+    cachedCount = 0
+    downloadedCount = 0
+  }
+
+  // Try WebGPU (unless caller forced WASM)
+  if (forceBackend !== 'wasm') {
+    console.log('[inference-worker] trying WebGPU backend...')
+    try {
+      pipeline = await createPipeline('feature-extraction', MODEL_ID, {
+        device: 'webgpu',
+        dtype: 'q8',
+        progress_callback: progressCallback,
+      })
+      activeBackend = 'webgpu'
+      logTiming('webgpu')
+      console.info('[inference-worker] backend selected: WebGPU')
+      return 'webgpu'
+    } catch (gpuErr) {
+      const elapsed = (performance.now() - t0).toFixed(0)
+      console.warn(
+        `[inference-worker] WebGPU failed after ${elapsed}ms` +
+          ` (${cachedCount} cached, ${downloadedCount} downloaded):`,
+        gpuErr,
+      )
+      if (forceBackend === 'webgpu') throw gpuErr
+      resetAttempt()
+    }
   }
 
   // WASM fallback
@@ -97,6 +155,7 @@ async function loadModel(onProgress: ProgressCallback): Promise<BackendName> {
     progress_callback: progressCallback,
   })
   activeBackend = 'wasm'
+  logTiming('wasm')
   console.info('[inference-worker] backend selected: WASM')
   return 'wasm'
 }
@@ -106,11 +165,9 @@ async function loadModel(onProgress: ProgressCallback): Promise<BackendName> {
  * The model must be loaded first via loadModel().
  */
 async function embed(text: string): Promise<number[]> {
-  console.log('[inference-worker] embed called, text length:', text.length)
   if (pipeline === null) throw new Error('Model not loaded — call loadModel() first')
 
   const output = await pipeline(text, { pooling: 'mean', normalize: true })
-  console.log('[inference-worker] embed done, dims:', output.data.length)
   // Return plain number[] to avoid Transferable complexity with Comlink
   return Array.from(output.data)
 }

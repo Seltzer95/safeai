@@ -22,6 +22,13 @@ const DB_VERSION = 2
 let _dbPromise: Promise<IDBPDatabase<SafeAiDB>> | null = null
 
 export function getDb(): Promise<IDBPDatabase<SafeAiDB>> {
+  // Guard: IndexedDB is browser-only. If this fires during SSR it's a bug.
+  if (typeof indexedDB === 'undefined') {
+    const msg = '[db] getDb() called outside browser — IndexedDB unavailable (SSR bug?)'
+    console.error(msg)
+    return Promise.reject(new Error(msg))
+  }
+
   if (_dbPromise) return _dbPromise
 
   _dbPromise = openDB<SafeAiDB>(DB_NAME, DB_VERSION, {
