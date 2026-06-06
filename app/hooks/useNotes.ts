@@ -33,6 +33,8 @@ export function useNotes(): UseNotesReturn {
   const [embeddingIds, setEmbeddingIds] = useState<Set<string>>(new Set())
   const { loadModel, embed, status: modelStatus } = useEmbedding()
   const didInit = useRef(false)
+  const modelStatusRef = useRef(modelStatus)
+  modelStatusRef.current = modelStatus
 
   const refresh = useCallback(async () => {
     setNotes(await listNotes())
@@ -46,9 +48,11 @@ export function useNotes(): UseNotesReturn {
     void refresh()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Fire-and-forget: compute embedding for a note and persist it. */
+  /** Fire-and-forget: compute embedding for a note and persist it.
+   *  Silently skips if the model is not yet ready to avoid unhandled errors on load. */
   const embedNote = useCallback(
     async (id: string, title: string, body: string) => {
+      if (modelStatusRef.current !== 'ready') return
       setEmbeddingIds((prev) => new Set(prev).add(id))
       try {
         const vector = await embed(`${title}\n${body}`)
