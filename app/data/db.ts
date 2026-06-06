@@ -1,36 +1,42 @@
 /**
- * Data layer — IndexedDB persistence.
+ * IndexedDB singleton via the `idb` library.
  *
- * Placeholder: define stores here as features are built.
- * Each store should have its own typed helper exported from this file.
+ * Add new object stores here when introducing new features.
+ * Bump DB_VERSION and add an `if (oldVersion < N)` branch in `upgrade`.
  */
 
+import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
+import type { Note } from './notes'
+
+interface SafeAiDB extends DBSchema {
+  notes: {
+    key: string
+    value: Note
+    indexes: { 'by-updatedAt': Date }
+  }
+}
+
 const DB_NAME = 'safeai'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
-let _db: IDBDatabase | null = null
+let _dbPromise: Promise<IDBPDatabase<SafeAiDB>> | null = null
 
-export function openDb(): Promise<IDBDatabase> {
-  if (_db) return Promise.resolve(_db)
+export function getDb(): Promise<IDBPDatabase<SafeAiDB>> {
+  if (_dbPromise) return _dbPromise
 
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION)
-
-    req.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result
-      // Create object stores here as features are added.
-      // Example:
-      //   db.createObjectStore('documents', { keyPath: 'id' })
-      void db
-    }
-
-    req.onsuccess = (event) => {
-      _db = (event.target as IDBOpenDBRequest).result
-      resolve(_db)
-    }
-
-    req.onerror = (event) => {
-      reject((event.target as IDBOpenDBRequest).error)
-    }
+  _dbPromise = openDB<SafeAiDB>(DB_NAME, DB_VERSION, {
+    upgrade(db, oldVersion) {
+      if (oldVersion < 2) {
+        const store = db.createObjectStore('notes', { keyPath: 'id' })
+        store.createIndex('by-updatedAt', 'updatedAt')
+      }
+    },
   })
+
+  return _dbPromise
+}
+
+/** Reset the DB singleton — for use in tests only. */
+export function resetDb(): void {
+  _dbPromise = null
 }
