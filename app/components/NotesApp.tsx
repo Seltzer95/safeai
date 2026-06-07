@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNotes } from '~/hooks/useNotes'
+import { useAIActions } from '~/hooks/useAIActions'
 import type { Note } from '~/data/notes'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -7,7 +8,13 @@ import { Textarea } from '~/components/ui/textarea'
 import { Badge } from '~/components/ui/badge'
 import { ScrollArea } from '~/components/ui/scroll-area'
 import { Separator } from '~/components/ui/separator'
-import { PlusIcon, Trash2Icon, Loader2Icon } from 'lucide-react'
+import {
+  PlusIcon,
+  Trash2Icon,
+  Loader2Icon,
+  SearchIcon,
+  XIcon,
+} from 'lucide-react'
 import { cn } from '~/lib/utils'
 
 function formatRelativeTime(date: Date): string {
@@ -30,11 +37,20 @@ type SaveStatus = 'saved' | 'saving' | 'unsaved'
 
 export function NotesApp() {
   const { notes, embeddingIds, modelStatus, createNote, updateNote, deleteNote } = useNotes()
+  const { rankNotes } = useAIActions()
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [localTitle, setLocalTitle] = useState('')
   const [localBody, setLocalBody] = useState('')
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<{ noteId: string; score: number }[] | null>(
+    null,
+  )
+  const [isSearching, setIsSearching] = useState(false)
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingRef = useRef<{ title: string; body: string } | null>(null)
@@ -44,6 +60,41 @@ export function NotesApp() {
   const sortedNotes = [...notes].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
   )
+
+  // ── Semantic search ─────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults(null)
+      return
+    }
+    if (modelStatus !== 'ready') return
+
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = setTimeout(async () => {
+      setIsSearching(true)
+      try {
+        const results = await rankNotes(searchQuery, notes)
+        setSearchResults(results)
+      } catch (err) {
+        console.error('[NotesApp] search failed:', err)
+        setSearchResults(null)
+      } finally {
+        setIsSearching(false)
+      }
+    }, 300)
+
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    }
+  }, [searchQuery, notes, modelStatus, rankNotes])
+
+  // Clear search results when query is cleared
+  useEffect(() => {
+    if (!searchQuery) setSearchResults(null)
+  }, [searchQuery])
+
+  // ── Save / select helpers ────────────────────────────────────────────────────
 
   const flushSave = useCallback(async (): Promise<void> => {
     if (saveTimerRef.current) {
@@ -133,6 +184,21 @@ export function NotesApp() {
 
   const selectedNote = notes.find((n) => n.id === selectedId) ?? null
 
+  // ── Sidebar note items ───────────────────────────────────────────────────────
+
+  // When search is active, show ranked results; otherwise show all notes sorted by date
+  const sidebarItems: { note: Note; score?: number }[] = (() => {
+    if (searchResults !== null) {
+      return searchResults
+        .map((r) => {
+          const note = notes.find((n) => n.id === r.noteId)
+          return note ? { note, score: r.score } : null
+        })
+        .filter((item): item is { note: Note; score: number } => item !== null)
+    }
+    return sortedNotes.map((note) => ({ note }))
+  })()
+
   return (
     <div className="flex h-svh bg-background text-foreground">
       {/* ── Sidebar ─────────────────────────────────────────── */}
@@ -145,13 +211,48 @@ export function NotesApp() {
           </Button>
         </div>
 
+        {/* Search box */}
+        <div className="border-b px-3 py-2">
+          <div className="relative">
+            {isSearching ? (
+              <Loader2Icon className="absolute left-2.5 top-2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            ) : (
+              <SearchIcon className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
+            )}
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                modelStatus === 'ready' ? 'Semantic search…' : 'Loading model…'
+              }
+              disabled={modelStatus !== 'ready'}
+              className="h-7 pl-7 pr-6 text-xs"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1.5"
+                aria-label="Clear search"
+              >
+                <XIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+          {searchResults !== null && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+            </p>
+          )}
+        </div>
+
         <ScrollArea className="flex-1">
-          {sortedNotes.length === 0 ? (
+          {sidebarItems.length === 0 ? (
             <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-              No notes yet
+              {searchResults !== null ? 'No matching notes' : 'No notes yet'}
             </p>
           ) : (
-            sortedNotes.map((note) => (
+            sidebarItems.map(({ note, score }) => (
               <div
                 key={note.id}
                 role="button"
@@ -174,13 +275,23 @@ export function NotesApp() {
                       {embeddingIds.has(note.id) && (
                         <Loader2Icon className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" />
                       )}
+                      {score !== undefined && (
+                        <Badge
+                          variant="outline"
+                          className="ml-auto shrink-0 px-1 py-0 text-xs font-normal"
+                        >
+                          {Math.round(score * 100)}%
+                        </Badge>
+                      )}
                     </div>
                     <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                       {snippet(note.body)}
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground/50">
-                      {formatRelativeTime(note.updatedAt)}
-                    </p>
+                    {!score && (
+                      <p className="mt-1 text-xs text-muted-foreground/50">
+                        {formatRelativeTime(note.updatedAt)}
+                      </p>
+                    )}
                   </div>
                   <Button
                     variant="ghost"
@@ -215,14 +326,17 @@ export function NotesApp() {
                 {saveStatus === 'unsaved' && 'Unsaved'}
                 {saveStatus === 'saved' && 'Saved'}
               </span>
-              {modelStatus !== 'ready' && (
-                <Badge variant="secondary" className="gap-1 text-xs">
-                  {modelStatus === 'loading' && (
-                    <Loader2Icon className="h-3 w-3 animate-spin" />
-                  )}
-                  Model {modelStatus}
-                </Badge>
-              )}
+
+              <div className="flex items-center gap-1.5">
+                {modelStatus !== 'ready' && (
+                  <Badge variant="secondary" className="gap-1 text-xs">
+                    {modelStatus === 'loading' && (
+                      <Loader2Icon className="h-3 w-3 animate-spin" />
+                    )}
+                    Model {modelStatus}
+                  </Badge>
+                )}
+              </div>
             </div>
 
             {/* Editable fields */}
@@ -233,13 +347,27 @@ export function NotesApp() {
                 placeholder="Untitled"
                 className="h-auto border-none p-0 text-2xl font-bold shadow-none focus-visible:ring-0"
               />
+
+              {/* Tags */}
+              {selectedNote.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {selectedNote.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
               <Separator />
+
               <Textarea
                 value={localBody}
                 onChange={(e) => handleBodyChange(e.target.value)}
                 placeholder="Start writing…"
                 className="min-h-80 flex-1 resize-none border-none p-0 text-sm leading-relaxed shadow-none focus-visible:ring-0"
               />
+
             </div>
           </>
         ) : (

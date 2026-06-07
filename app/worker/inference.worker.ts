@@ -172,7 +172,34 @@ async function embed(text: string): Promise<number[]> {
   return Array.from(output.data)
 }
 
-const api = { loadModel, embed }
+// ─── Cosine-similarity ranking (runs entirely in the worker) ─────────────────
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0
+  let magA = 0
+  let magB = 0
+  for (let i = 0; i < a.length; i++) {
+    const ai = a[i] ?? 0
+    const bi = b[i] ?? 0
+    dot += ai * bi
+    magA += ai * ai
+    magB += bi * bi
+  }
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB) + 1e-10)
+}
+
+async function rankByQuery(
+  queryEmbedding: number[],
+  notes: { id: string; embedding: number[] }[],
+): Promise<{ id: string; score: number }[]> {
+  return notes
+    .map((n) => ({ id: n.id, score: cosineSimilarity(queryEmbedding, n.embedding) }))
+    .sort((a, b) => b.score - a.score)
+}
+
+// ─── Public API ──────────────────────────────────────────────────────────────
+
+const api = { loadModel, embed, rankByQuery }
 export type InferenceWorkerApi = typeof api
 
 // Guard: only expose via Comlink when actually running inside a Worker.

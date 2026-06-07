@@ -1,5 +1,9 @@
 /**
- * useEmbedding — manages the inference worker lifecycle.
+ * useEmbedding — manages the embedding model lifecycle.
+ *
+ * Uses the shared inference worker singleton (see shared-api.ts) so that
+ * other hooks (useAIActions) can share the same worker without spawning a
+ * second instance.
  *
  * Usage:
  *   const { status, progress, activeBackend, loadModel, embed, error } = useEmbedding()
@@ -8,6 +12,7 @@
 import { useRef, useState, useCallback } from 'react'
 import * as Comlink from 'comlink'
 import type { InferenceWorkerApi, BackendName } from '~/worker/inference.worker'
+import { getInferenceApi } from '~/worker/shared-api'
 
 export type EmbeddingStatus = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -27,7 +32,6 @@ export interface UseEmbeddingReturn {
 }
 
 export function useEmbedding(): UseEmbeddingReturn {
-  const workerRef = useRef<Worker | null>(null)
   const apiRef = useRef<Comlink.Remote<InferenceWorkerApi> | null>(null)
 
   const [status, setStatus] = useState<EmbeddingStatus>('idle')
@@ -35,29 +39,10 @@ export function useEmbedding(): UseEmbeddingReturn {
   const [activeBackend, setActiveBackend] = useState<BackendName | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  /**
-   * Lazily create the worker and Comlink proxy (synchronous — no dynamic import).
-   *
-   * Vite recognises the `new Worker(new URL(..., import.meta.url))` pattern and
-   * builds the worker as a separate chunk. This is the canonical Vite approach
-   * for dynamic worker construction; `?worker` only works for static imports.
-   */
+  /** Returns the shared Comlink proxy, creating it once on first call. */
   function getApi(): Comlink.Remote<InferenceWorkerApi> {
     if (apiRef.current) return apiRef.current
-
-    console.log('[useEmbedding] creating Worker...')
-    const worker = new Worker(
-      new URL('../worker/inference.worker.ts', import.meta.url),
-      { type: 'module' },
-    )
-    workerRef.current = worker
-
-    worker.onerror = (e) => {
-      console.error('[useEmbedding] Worker runtime error:', e.message, e)
-    }
-
-    apiRef.current = Comlink.wrap<InferenceWorkerApi>(worker)
-    console.log('[useEmbedding] Worker created, Comlink proxy ready')
+    apiRef.current = getInferenceApi()
     return apiRef.current
   }
 
@@ -76,8 +61,9 @@ export function useEmbedding(): UseEmbeddingReturn {
     //   localStorage.setItem('SAFEAI_BACKEND', 'wasm')  // force WASM (faster on Intel Mac)
     //   localStorage.removeItem('SAFEAI_BACKEND')        // revert to auto
     const backendOverride =
-      (typeof localStorage !== 'undefined' ? (localStorage.getItem('SAFEAI_BACKEND') as BackendName | null) : null) ??
-      undefined
+      (typeof localStorage !== 'undefined'
+        ? (localStorage.getItem('SAFEAI_BACKEND') as BackendName | null)
+        : null) ?? undefined
     if (backendOverride) {
       console.log('[useEmbedding] backend override from localStorage:', backendOverride)
     }
