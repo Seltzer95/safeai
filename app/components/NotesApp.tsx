@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNotes } from '~/hooks/useNotes'
 import { useAIActions } from '~/hooks/useAIActions'
+import { useRelatedNotes } from '~/hooks/useRelatedNotes'
 import type { Note } from '~/data/notes'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -183,6 +184,7 @@ export function NotesApp() {
   }
 
   const selectedNote = notes.find((n) => n.id === selectedId) ?? null
+  const relatedNotes = useRelatedNotes(selectedNote, notes)
 
   // ── Sidebar note items ───────────────────────────────────────────────────────
 
@@ -368,6 +370,33 @@ export function NotesApp() {
                 className="min-h-80 flex-1 resize-none border-none p-0 text-sm leading-relaxed shadow-none focus-visible:ring-0"
               />
 
+              {/* Related notes */}
+              {relatedNotes.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="pb-2">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">Related notes</p>
+                    <div className="flex flex-col gap-0.5">
+                      {relatedNotes.map(({ note, score }) => (
+                        <button
+                          key={note.id}
+                          type="button"
+                          onClick={() => void selectNote(note)}
+                          className="flex items-center justify-between rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/50"
+                        >
+                          <span className="truncate text-sm">{note.title || 'Untitled'}</span>
+                          <Badge
+                            variant="outline"
+                            className="ml-2 shrink-0 px-1 py-0 text-xs font-normal"
+                          >
+                            {Math.round(score * 100)}%
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </>
         ) : (

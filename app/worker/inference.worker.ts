@@ -197,9 +197,23 @@ async function rankByQuery(
     .sort((a, b) => b.score - a.score)
 }
 
+/**
+ * Rank a list of notes by similarity to a source embedding.
+ * The caller is responsible for excluding the source note from `notes`.
+ * Returns results sorted best-first with 0–1 scores.
+ */
+async function rankBySimilarity(
+  sourceEmbedding: number[],
+  notes: { id: string; embedding: number[] }[],
+): Promise<{ id: string; score: number }[]> {
+  return notes
+    .map((n) => ({ id: n.id, score: cosineSimilarity(sourceEmbedding, n.embedding) }))
+    .sort((a, b) => b.score - a.score)
+}
+
 // ─── Public API ──────────────────────────────────────────────────────────────
 
-const api = { loadModel, embed, rankByQuery }
+const api = { loadModel, embed, rankByQuery, rankBySimilarity }
 export type InferenceWorkerApi = typeof api
 
 // Guard: only expose via Comlink when actually running inside a Worker.
