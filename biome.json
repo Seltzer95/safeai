@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -7,11 +7,16 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": ["app/routeTree.gen.ts", "dist", ".output", ".vinxi"]
+    "includes": [
+      "**",
+      "!**/app/routeTree.gen.ts",
+      "!**/dist",
+      "!**/.output",
+      "!**/.vinxi",
+      "!**/app/styles"
+    ]
   },
-  "organizeImports": {
-    "enabled": true
-  },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "enabled": true,
     "rules": {

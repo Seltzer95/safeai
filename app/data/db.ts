@@ -5,7 +5,7 @@
  * Bump DB_VERSION and add an `if (oldVersion < N)` branch in `upgrade`.
  */
 
-import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
+import { type DBSchema, type IDBPDatabase, openDB } from 'idb'
 import type { Note } from './notes'
 
 interface SafeAiDB extends DBSchema {

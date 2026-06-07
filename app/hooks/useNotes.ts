@@ -6,17 +6,17 @@
  * its id appears in `embeddingIds` so the UI can show a subtle indicator.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createNote as dbCreate,
-  updateNote as dbUpdate,
   deleteNote as dbDelete,
+  updateNote as dbUpdate,
   listNotes,
   type Note,
   type NoteInput,
   type NoteUpdate,
 } from '~/data/notes'
-import { useEmbedding, type EmbeddingStatus } from './useEmbedding'
+import { type EmbeddingStatus, useEmbedding } from './useEmbedding'
 
 export interface UseNotesReturn {
   notes: Note[]
@@ -37,7 +37,13 @@ export interface UseNotesReturn {
 export function useNotes(): UseNotesReturn {
   const [notes, setNotes] = useState<Note[]>([])
   const [embeddingIds, setEmbeddingIds] = useState<Set<string>>(new Set())
-  const { loadModel, embed, status: modelStatus, progress: modelProgress, error: modelError } = useEmbedding()
+  const {
+    loadModel,
+    embed,
+    status: modelStatus,
+    progress: modelProgress,
+    error: modelError,
+  } = useEmbedding()
   const didInit = useRef(false)
   const modelStatusRef = useRef(modelStatus)
   modelStatusRef.current = modelStatus
@@ -52,7 +58,10 @@ export function useNotes(): UseNotesReturn {
     setNotes(await listNotes())
   }, [])
 
-  // Hydrate notes immediately; load model lazily after first paint
+  // Hydrate notes immediately; load model lazily after first paint.
+  // Empty deps is intentional: this runs exactly once on mount. refresh and
+  // loadModel are stable callbacks (useCallback) so no stale-closure risk.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional mount-only effect
   useEffect(() => {
     if (didInit.current) return
     didInit.current = true
@@ -61,7 +70,7 @@ export function useNotes(): UseNotesReturn {
     // notes create/edit/delete are fully usable without waiting for the model.
     const timer = setTimeout(() => void loadModel(), 0)
     return () => clearTimeout(timer)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   /** Fire-and-forget: compute embedding for a note and persist it.
    *  Silently skips if the model is not yet ready to avoid unhandled errors on load. */
@@ -148,5 +157,15 @@ export function useNotes(): UseNotesReturn {
     }
   }, [refresh, embedNote])
 
-  return { notes, embeddingIds, modelStatus, modelProgress, modelError, createNote, updateNote, deleteNote, loadDemoNotes }
+  return {
+    notes,
+    embeddingIds,
+    modelStatus,
+    modelProgress,
+    modelError,
+    createNote,
+    updateNote,
+    deleteNote,
+    loadDemoNotes,
+  }
 }

@@ -16,17 +16,22 @@ export function EmbeddingDemo() {
   const [result, setResult] = useState<{ length: number; preview: number[] } | null>(null)
 
   useEffect(() => {
-    const worker = new Worker(
-      new URL('../worker/embedding.worker.ts', import.meta.url),
-      { type: 'module' },
-    )
+    const worker = new Worker(new URL('../worker/embedding.worker.ts', import.meta.url), {
+      type: 'module',
+    })
     worker.onerror = (e) => {
       console.error('[EmbeddingDemo] worker error:', e)
       setError(String(e.message))
       setStatus('error')
     }
     worker.onmessage = (e: MessageEvent) => {
-      const msg = e.data as { type: string; value?: number; backend?: string; data?: number[]; message?: string }
+      const msg = e.data as {
+        type: string
+        value?: number
+        backend?: string
+        data?: number[]
+        message?: string
+      }
       console.log('[EmbeddingDemo] worker message:', msg.type)
       if (msg.type === 'PROGRESS') {
         setProgress(msg.value ?? 0)
@@ -61,7 +66,10 @@ export function EmbeddingDemo() {
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-xl p-4 font-mono text-sm">
-      <div>status: <strong>{status}</strong>{backend ? ` (${backend})` : ''}</div>
+      <div>
+        status: <strong>{status}</strong>
+        {backend ? ` (${backend})` : ''}
+      </div>
 
       <button
         type="button"

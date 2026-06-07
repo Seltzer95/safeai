@@ -6,9 +6,9 @@
  * No model inference is performed — only vector math.
  */
 
-import { useState, useEffect } from 'react'
-import { getInferenceApi } from '~/worker/shared-api'
+import { useEffect, useState } from 'react'
 import type { Note } from '~/data/notes'
+import { getInferenceApi } from '~/worker/shared-api'
 
 export interface RelatedNote {
   note: Note
@@ -41,26 +41,29 @@ export function useRelatedNotes(
     let cancelled = false
     const api = getInferenceApi()
 
-    void api.rankBySimilarity(sourceEmbedding, candidates).then((ranked) => {
-      if (cancelled) return
-      const result = ranked
-        .slice(0, limit)
-        .map((r) => {
-          const note = allNotes.find((n) => n.id === r.id)
-          return note ? { note, score: r.score } : null
-        })
-        .filter((x): x is RelatedNote => x !== null)
-      setRelated(result)
-    }).catch(() => {
-      if (!cancelled) setRelated([])
-    })
+    void api
+      .rankBySimilarity(sourceEmbedding, candidates)
+      .then((ranked) => {
+        if (cancelled) return
+        const result = ranked
+          .slice(0, limit)
+          .map((r) => {
+            const note = allNotes.find((n) => n.id === r.id)
+            return note ? { note, score: r.score } : null
+          })
+          .filter((x): x is RelatedNote => x !== null)
+        setRelated(result)
+      })
+      .catch(() => {
+        if (!cancelled) setRelated([])
+      })
 
     return () => {
       cancelled = true
     }
-  // Re-run when the selected note changes or when any note gains an embedding
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNote?.id, selectedNote?.embedding, allNotes, limit])
+    // Re-run whenever selectedNote changes (id, embedding, or any other field),
+    // or when the notes list is updated (embeddings computed by the worker).
+  }, [selectedNote, allNotes, limit])
 
   return related
 }

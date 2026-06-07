@@ -6,8 +6,8 @@
  */
 
 import { useCallback } from 'react'
-import { getInferenceApi } from '~/worker/shared-api'
 import type { Note } from '~/data/notes'
+import { getInferenceApi } from '~/worker/shared-api'
 
 export interface SearchResult {
   noteId: string
@@ -24,21 +24,18 @@ export interface UseAIActionsReturn {
 }
 
 export function useAIActions(): UseAIActionsReturn {
-  const rankNotes = useCallback(
-    async (query: string, notes: Note[]): Promise<SearchResult[]> => {
-      const notesWithEmbeddings = notes
-        .filter((n) => n.embedding !== null)
-        .map((n) => ({ id: n.id, embedding: Array.from(n.embedding as Float32Array) }))
+  const rankNotes = useCallback(async (query: string, notes: Note[]): Promise<SearchResult[]> => {
+    const notesWithEmbeddings = notes
+      .filter((n) => n.embedding !== null)
+      .map((n) => ({ id: n.id, embedding: Array.from(n.embedding as Float32Array) }))
 
-      if (notesWithEmbeddings.length === 0) return []
+    if (notesWithEmbeddings.length === 0) return []
 
-      const api = getInferenceApi()
-      const queryEmbedding = await api.embed(query)
-      const ranked = await api.rankByQuery(queryEmbedding, notesWithEmbeddings)
-      return ranked.map((r) => ({ noteId: r.id, score: r.score }))
-    },
-    [],
-  )
+    const api = getInferenceApi()
+    const queryEmbedding = await api.embed(query)
+    const ranked = await api.rankByQuery(queryEmbedding, notesWithEmbeddings)
+    return ranked.map((r) => ({ noteId: r.id, score: r.score }))
+  }, [])
 
   return { rankNotes }
 }

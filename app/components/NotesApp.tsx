@@ -1,24 +1,24 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNotes } from '~/hooks/useNotes'
-import { useAIActions } from '~/hooks/useAIActions'
-import { useRelatedNotes } from '~/hooks/useRelatedNotes'
-import type { Note } from '~/data/notes'
-import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
-import { Textarea } from '~/components/ui/textarea'
-import { Badge } from '~/components/ui/badge'
-import { ScrollArea } from '~/components/ui/scroll-area'
-import { Separator } from '~/components/ui/separator'
 import {
-  PlusIcon,
-  Trash2Icon,
-  Loader2Icon,
-  SearchIcon,
-  XIcon,
-  SparklesIcon,
   AlertCircleIcon,
   ChevronLeftIcon,
+  Loader2Icon,
+  PlusIcon,
+  SearchIcon,
+  SparklesIcon,
+  Trash2Icon,
+  XIcon,
 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Badge } from '~/components/ui/badge'
+import { Button } from '~/components/ui/button'
+import { Input } from '~/components/ui/input'
+import { ScrollArea } from '~/components/ui/scroll-area'
+import { Separator } from '~/components/ui/separator'
+import { Textarea } from '~/components/ui/textarea'
+import type { Note } from '~/data/notes'
+import { useAIActions } from '~/hooks/useAIActions'
+import { useNotes } from '~/hooks/useNotes'
+import { useRelatedNotes } from '~/hooks/useRelatedNotes'
 import { cn } from '~/lib/utils'
 
 function formatRelativeTime(date: Date): string {
@@ -144,8 +144,7 @@ export function NotesApp() {
       setLocalTitle(note.title)
       setLocalBody(note.body)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId])
+  }, [selectedId, notes])
 
   const scheduleSave = useCallback(
     (title: string, body: string): void => {
@@ -228,8 +227,8 @@ export function NotesApp() {
   // Mobile: show sidebar (list) OR main (editor/welcome), never both.
   // Desktop (md+): always show both.
   const isEmpty = sortedNotes.length === 0
-  const sidebarVisible = !selectedId && !isEmpty  // mobile: sidebar when browsing notes
-  const mainVisible = !!selectedId || isEmpty      // mobile: main when editing or empty/welcome
+  const sidebarVisible = !selectedId && !isEmpty // mobile: sidebar when browsing notes
+  const mainVisible = !!selectedId || isEmpty // mobile: main when editing or empty/welcome
 
   return (
     <div className="flex h-svh bg-background text-foreground">
@@ -339,14 +338,10 @@ export function NotesApp() {
             </div>
           ) : (
             sidebarItems.map(({ note, score }) => (
-              <div
+              <button
                 key={note.id}
-                role="button"
-                tabIndex={0}
+                type="button"
                 onClick={() => void selectNote(note)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') void selectNote(note)
-                }}
                 className={cn(
                   'group w-full cursor-pointer border-b px-4 py-3 text-left transition-colors hover:bg-muted/50',
                   selectedId === note.id && 'bg-muted',
@@ -388,7 +383,7 @@ export function NotesApp() {
                     <Trash2Icon className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-              </div>
+              </button>
             ))
           )}
         </ScrollArea>
@@ -555,11 +550,7 @@ export function NotesApp() {
                 )}
                 {isLoadingDemo ? 'Loading…' : 'Load demo notes'}
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => void handleNewNote()}
-                className="w-full"
-              >
+              <Button variant="outline" onClick={() => void handleNewNote()} className="w-full">
                 <PlusIcon className="mr-2 h-4 w-4" />
                 Start from scratch
               </Button>

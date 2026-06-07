@@ -1,12 +1,6 @@
-import {
-  createStartHandler,
-  defaultStreamHandler,
-} from '@tanstack/react-start/server'
-import { getRouter } from './router'
+import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/server'
 
-const _handle = createStartHandler({
-  createRouter: getRouter,
-})(defaultStreamHandler)
+const _handle = createStartHandler(defaultStreamHandler)
 
 /**
  * Timing wrapper around the SSR handler.
@@ -30,9 +24,8 @@ export default async function ssrHandler(request: Request): Promise<Response> {
   })()
   console.log(`[ssr] → ${request.method} ${path} @ ${new Date().toISOString()}`)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const response = await (_handle as any)(request)
+  const response = await _handle(request)
 
-  console.log(`[ssr] ← ${(response as Response).status} in ${Date.now() - t0}ms`)
-  return response as Response
+  console.log(`[ssr] ← ${response.status} in ${Date.now() - t0}ms`)
+  return response
 }

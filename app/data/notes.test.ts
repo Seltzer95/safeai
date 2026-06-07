@@ -10,14 +10,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import 'fake-indexeddb/auto'
 import { IDBFactory } from 'fake-indexeddb'
 import { resetDb } from './db'
-import {
-  createNote,
-  getNote,
-  updateNote,
-  deleteNote,
-  listNotes,
-  type NoteInput,
-} from './notes'
+import { createNote, deleteNote, getNote, listNotes, type NoteInput, updateNote } from './notes'
 
 beforeEach(() => {
   // Fresh in-memory IndexedDB for every test
@@ -80,15 +73,15 @@ describe('updateNote', () => {
     expect(updated.embedding).toBeInstanceOf(Float32Array)
     // Float32Array has limited precision; compare element-wise with tolerance
     const expected = Array.from(vec)
-    const actual = Array.from(updated.embedding!)
+    const actual = Array.from(updated.embedding as Float32Array)
     for (let i = 0; i < expected.length; i++) {
-      expect(actual[i]).toBeCloseTo(expected[i]!, 5)
+      expect(actual[i]).toBeCloseTo(expected[i] ?? 0, 5)
     }
 
     // Persisted correctly (instanceof check is unreliable across jsdom realms)
     const fetched = await getNote(note.id)
     expect(fetched?.embedding).not.toBeNull()
-    expect((fetched!.embedding as unknown as Float32Array).BYTES_PER_ELEMENT).toBe(4)
+    expect((fetched?.embedding as unknown as Float32Array).BYTES_PER_ELEMENT).toBe(4)
   })
 
   it('throws for unknown id', async () => {

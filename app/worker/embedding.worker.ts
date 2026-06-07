@@ -69,7 +69,6 @@ self.onmessage = async (e: MessageEvent) => {
       console.error('[embedding-worker] load failed:', err)
       self.postMessage({ type: 'ERROR', message: String(err) })
     }
-
   } else if (msg.type === 'EMBED') {
     if (!pipeline) {
       self.postMessage({ type: 'ERROR', message: 'Model not loaded' })

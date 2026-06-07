@@ -14,10 +14,7 @@ let _api: Comlink.Remote<InferenceWorkerApi> | null = null
 export function getInferenceApi(): Comlink.Remote<InferenceWorkerApi> {
   if (_api) return _api
 
-  const worker = new Worker(
-    new URL('./inference.worker.ts', import.meta.url),
-    { type: 'module' },
-  )
+  const worker = new Worker(new URL('./inference.worker.ts', import.meta.url), { type: 'module' })
   worker.onerror = (e) => {
     console.error('[inference-worker] runtime error:', e.message, e)
   }

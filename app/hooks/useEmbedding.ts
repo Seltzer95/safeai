@@ -9,9 +9,9 @@
  *   const { status, progress, activeBackend, loadModel, embed, error } = useEmbedding()
  */
 
-import { useRef, useState, useCallback } from 'react'
 import * as Comlink from 'comlink'
-import type { InferenceWorkerApi, BackendName } from '~/worker/inference.worker'
+import { useCallback, useRef, useState } from 'react'
+import type { BackendName, InferenceWorkerApi } from '~/worker/inference.worker'
 import { getInferenceApi } from '~/worker/shared-api'
 
 export type EmbeddingStatus = 'idle' | 'loading' | 'ready' | 'error'
@@ -46,6 +46,7 @@ export function useEmbedding(): UseEmbeddingReturn {
     return apiRef.current
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: getApi is a stable ref accessor, not reactive
   const loadModel = useCallback(async () => {
     console.log('[useEmbedding] loadModel called — status:', status)
     if (status === 'loading' || status === 'ready') {

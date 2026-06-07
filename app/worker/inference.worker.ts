@@ -15,8 +15,14 @@
  *   localStorage.removeItem('SAFEAI_BACKEND')        // revert to auto
  */
 
-import * as Comlink from 'comlink'
 import type { FeatureExtractionPipeline } from '@huggingface/transformers'
+import * as Comlink from 'comlink'
+import {
+  rankByQuery as _rankByQuery,
+  rankBySimilarity as _rankBySimilarity,
+  type EmbeddedNote,
+  type RankedItem,
+} from './similarity'
 
 export type ProgressCallback = (progress: number) => void
 
@@ -33,12 +39,15 @@ let activeBackend: BackendName | null = null
  * @param forceBackend - 'wasm' skips WebGPU entirely; 'webgpu' skips the WASM fallback;
  *                       omit for auto (WebGPU → WASM)
  */
-async function loadModel(onProgress: ProgressCallback, forceBackend?: BackendName): Promise<BackendName> {
+async function loadModel(
+  onProgress: ProgressCallback,
+  forceBackend?: BackendName,
+): Promise<BackendName> {
   console.log('[inference-worker] loadModel called, forceBackend:', forceBackend ?? 'auto')
 
   if (pipeline !== null) {
     console.log('[inference-worker] already loaded, returning cached backend:', activeBackend)
-    return activeBackend!
+    return activeBackend as BackendName
   }
 
   // Dynamic import keeps @huggingface/transformers out of the main bundle
@@ -174,27 +183,8 @@ async function embed(text: string): Promise<number[]> {
 
 // ─── Cosine-similarity ranking (runs entirely in the worker) ─────────────────
 
-function cosineSimilarity(a: number[], b: number[]): number {
-  let dot = 0
-  let magA = 0
-  let magB = 0
-  for (let i = 0; i < a.length; i++) {
-    const ai = a[i] ?? 0
-    const bi = b[i] ?? 0
-    dot += ai * bi
-    magA += ai * ai
-    magB += bi * bi
-  }
-  return dot / (Math.sqrt(magA) * Math.sqrt(magB) + 1e-10)
-}
-
-async function rankByQuery(
-  queryEmbedding: number[],
-  notes: { id: string; embedding: number[] }[],
-): Promise<{ id: string; score: number }[]> {
-  return notes
-    .map((n) => ({ id: n.id, score: cosineSimilarity(queryEmbedding, n.embedding) }))
-    .sort((a, b) => b.score - a.score)
+async function rankByQuery(queryEmbedding: number[], notes: EmbeddedNote[]): Promise<RankedItem[]> {
+  return _rankByQuery(queryEmbedding, notes)
 }
 
 /**
@@ -204,11 +194,9 @@ async function rankByQuery(
  */
 async function rankBySimilarity(
   sourceEmbedding: number[],
-  notes: { id: string; embedding: number[] }[],
-): Promise<{ id: string; score: number }[]> {
-  return notes
-    .map((n) => ({ id: n.id, score: cosineSimilarity(sourceEmbedding, n.embedding) }))
-    .sort((a, b) => b.score - a.score)
+  notes: EmbeddedNote[],
+): Promise<RankedItem[]> {
+  return _rankBySimilarity(sourceEmbedding, notes)
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -218,7 +206,9 @@ export type InferenceWorkerApi = typeof api
 
 // Guard: only expose via Comlink when actually running inside a Worker.
 // Without this, SSR imports of this file crash because self.addEventListener
-// doesn't exist in Node.js.
-if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope) {
+// doesn't exist in Node.js. We avoid referencing WorkerGlobalScope as a value
+// (it's type-only in the DOM lib) and instead use `in` to check for the
+// postMessage global, which exists in workers but not in Node.js server environments.
+if (typeof self !== 'undefined' && 'postMessage' in self) {
   Comlink.expose(api)
 }
