@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "safeai",
+  "compatibility_date": "2025-12-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // The @cloudflare/vite-plugin builds the SSR Vite environment into the
+  // Cloudflare Worker. This entry is resolved through TanStack Start's
+  // virtual module alias -> app/server.tsx.
+  "main": "./app/server.tsx",
+  "observability": {
+    "enabled": true
+  },
+  // Assets are served from the client build output directory.
+  // The Worker handles SSR for HTML pages; static assets (JS, CSS, models)
+  // are served directly by the Cloudflare edge from this directory.
+  "assets": {
+    "directory": "./dist/client"
+  }
+}

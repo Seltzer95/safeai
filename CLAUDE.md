@@ -20,7 +20,7 @@ pnpm lint      # eslint
 
 ### Inference & vector math
 All `@huggingface/transformers` calls and vector operations run exclusively in a Web Worker — never on the main thread. Communicate via `postMessage`/`onmessage`. Do not import pipeline or model utilities in any file that runs on the main thread.
-
+2
 ### Modules
 Prefer small, single-responsibility modules. One concept per file. Avoid large barrel files.
 

@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { cloudflare } from '@cloudflare/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
@@ -14,8 +15,13 @@ export default defineConfig({
     exclude: ['@huggingface/transformers'],
   },
   plugins: [
-    // Serve model files with long-lived HTTP cache headers so the browser
-    // won't re-download them on refresh (works independently of the Cache API).
+    // Cloudflare Workers adapter — must come before tanstackStart.
+    // Targets the SSR Vite environment so TanStack Start's server entry
+    // is compiled as a Cloudflare Worker module.
+    cloudflare({ viteEnvironment: { name: 'ssr' } }),
+    // Serve model files with long-lived HTTP cache headers in dev.
+    // Production cache headers live in public/_headers (Cloudflare Pages)
+    // and are set by the Worker for SSR responses.
     {
       name: 'model-cache-headers',
       configureServer(server) {
