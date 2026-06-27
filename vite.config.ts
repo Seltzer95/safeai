@@ -36,6 +36,9 @@ export default defineConfig({
       },
       spa: {
         enabled: true,
+        prerender: {
+          outputPath: '/index',
+        },
       },
     }),
     // react's vite plugin must come after start's vite plugin
