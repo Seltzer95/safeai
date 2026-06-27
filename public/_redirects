@@ -1,0 +1,4 @@
+# Cloudflare Pages SPA rewrite rule.
+# All requests that don't match a static file are served the SPA shell.
+# Static assets (JS, CSS, models, etc.) take priority over this rule.
+/* /_shell.html 200

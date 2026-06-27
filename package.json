@@ -6,8 +6,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "pnpm build && wrangler deploy",
-    "cf:preview": "wrangler dev",
+    "deploy": "pnpm build",
     "test": "vitest",
     "lint": "biome check .",
     "format": "biome format --write ."

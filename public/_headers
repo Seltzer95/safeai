@@ -1,6 +1,5 @@
 # Cloudflare Pages _headers
-# Applies to static assets served directly from the edge CDN.
-# HTML pages rendered by the SSR Worker get these headers via app/server.tsx.
+# Applies to all static assets served by Cloudflare Pages (no SSR Worker).
 
 /*
   Cross-Origin-Opener-Policy: same-origin
