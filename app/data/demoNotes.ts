@@ -15,7 +15,7 @@ Ingredients: 200g spaghetti, 100g guanciale (or pancetta), 2 whole eggs + 2 yolk
 Method: render the guanciale in a dry pan until crispy and the fat runs. Cook pasta al dente and reserve a cup of starchy water. Remove pan from heat. Toss hot pasta with guanciale fat. Add egg-and-cheese mixture, tossing vigorously while adding pasta water a splash at a time until silky.
 
 The cardinal rule: no cream, ever. The creaminess comes entirely from emulsifying eggs with starchy pasta water.`,
-    tags: ['cooking', 'pasta', 'recipe'],
+    tags: [],
   },
   {
     title: 'Sourdough Starter — Week 1 Notes',
@@ -27,7 +27,7 @@ Day 5: More activity — doubles in size about 8 hours after feeding.
 Day 7: Passes the float test! Ready to bake.
 
 Key learnings: use room-temp water (chlorine in tap water can inhibit fermentation), feed at the same time each day, temperature matters a lot — a warmer kitchen means faster fermentation.`,
-    tags: ['cooking', 'bread', 'baking'],
+    tags: [],
   },
   {
     title: 'Japanese Pantry Essentials',
@@ -43,7 +43,7 @@ Key learnings: use room-temp water (chlorine in tap water can inhibit fermentati
 - Japanese short-grain rice
 
 With these staples you can make teriyaki, miso soup, tsukemono pickles, ramen tare, and most classic Japanese dishes. Buy at an Asian grocery store — quality difference vs. supermarket imports is significant.`,
-    tags: ['cooking', 'japanese', 'pantry'],
+    tags: [],
   },
   {
     title: 'Tokyo — Neighborhood Guide',
@@ -58,7 +58,7 @@ Koenji: subculture central — more vintage shops, live music venues, cult curry
 Kagurazaka: French-quarter vibe meets old Tokyo. Cobblestone alleys, excellent bakeries, bistros run by French expats.
 
 Pro tips: Get a Suica card at the airport — works on all trains and convenience stores. Most museums are closed Mondays. Download Google Maps offline before you go.`,
-    tags: ['travel', 'japan', 'tokyo'],
+    tags: [],
   },
   {
     title: 'Kyoto — 3-Day Itinerary',
@@ -72,7 +72,7 @@ Day 3 — Temples & Tea
 Ryoan-ji rock garden at opening (8am, before the crowds). Kinkaku-ji (inevitable but worth it). Afternoon tea ceremony in the Urasenke district.
 
 Cycling the city is far better than taxis — flat terrain, rental bikes everywhere.`,
-    tags: ['travel', 'japan', 'kyoto'],
+    tags: [],
   },
   {
     title: 'Lisbon Weekend Notes',
@@ -85,7 +85,7 @@ Saturday: Hiked up to São Jorge castle (the view from the walls is worth every 
 Sunday: LX Factory Sunday market — excellent vintage, solid food stalls. Booked Cervejaria Ramiro for the shellfish lunch. Worth every euro.
 
 Overall: the city is astonishingly walkable. The hills are real but the views pay for the climb. Fado is everywhere and it's not a tourist act — people genuinely love it.`,
-    tags: ['travel', 'europe', 'portugal'],
+    tags: [],
   },
   {
     title: 'Q3 Engineering Retrospective',
@@ -106,7 +106,7 @@ Action items:
 1. Add 2x multiplier to infra task estimates in planning [whole team]
 2. Weekly cross-team dependency check on Fridays [PM]
 3. Engineering wiki refresh sprint in Q4 [staff eng]`,
-    tags: ['work', 'retrospective', 'engineering'],
+    tags: [],
   },
   {
     title: 'Weekly Review Template',
@@ -122,6 +122,6 @@ Action items:
 The key question: what's the one thing that would make this week feel successful?
 
 Running this consistently makes quarterly reviews almost effortless — everything is already captured and the patterns are obvious.`,
-    tags: ['work', 'productivity', 'systems'],
+    tags: [],
   },
 ]

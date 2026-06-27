@@ -337,18 +337,18 @@ export function NotesApp() {
               )}
             </div>
           ) : (
-            sidebarItems.map(({ note, score }) => (
-              <button
-                key={note.id}
-                type="button"
-                onClick={() => void selectNote(note)}
-                className={cn(
-                  'group w-full cursor-pointer border-b px-4 py-3 text-left transition-colors hover:bg-muted/50',
-                  selectedId === note.id && 'bg-muted',
-                )}
-              >
-                <div className="flex items-start justify-between gap-1.5">
-                  <div className="min-w-0 flex-1">
+            <ul>
+              {sidebarItems.map(({ note, score }) => (
+                <li
+                  key={note.id}
+                  className={cn('group relative border-b', selectedId === note.id && 'bg-muted')}
+                >
+                  {/* Selection area — full-width button, right-padded to clear delete button */}
+                  <button
+                    type="button"
+                    onClick={() => void selectNote(note)}
+                    className="w-full cursor-pointer px-4 py-3 pr-10 text-left transition-colors hover:bg-muted/50"
+                  >
                     <div className="flex min-w-0 items-center gap-1.5">
                       <span className="min-w-0 flex-1 truncate text-sm font-medium">
                         {note.title || 'Untitled'}
@@ -357,10 +357,7 @@ export function NotesApp() {
                         <Loader2Icon className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" />
                       )}
                       {score !== undefined && (
-                        <Badge
-                          variant="outline"
-                          className="shrink-0 px-1 py-0 text-xs font-normal"
-                        >
+                        <Badge variant="outline" className="shrink-0 px-1 py-0 text-xs font-normal">
                           {Math.round(score * 100)}%
                         </Badge>
                       )}
@@ -368,23 +365,24 @@ export function NotesApp() {
                     <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                       {snippet(note.body)}
                     </p>
-                    {!score && (
+                    {score === undefined && (
                       <p className="mt-1 text-xs text-muted-foreground/50">
                         {formatRelativeTime(note.updatedAt)}
                       </p>
                     )}
-                  </div>
+                  </button>
+                  {/* Delete button — absolutely positioned, sibling to the select button */}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                    className="absolute right-2 top-2 h-6 w-6 shrink-0 opacity-40 transition-opacity group-hover:opacity-100"
                     onClick={(e) => void handleDelete(note.id, e)}
                   >
                     <Trash2Icon className="h-3.5 w-3.5" />
                   </Button>
-                </div>
-              </button>
-            ))
+                </li>
+              ))}
+            </ul>
           )}
         </ScrollArea>
       </aside>
