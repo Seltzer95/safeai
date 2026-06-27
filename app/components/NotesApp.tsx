@@ -337,11 +337,11 @@ export function NotesApp() {
               )}
             </div>
           ) : (
-            <ul>
+            <ul className="w-full">
               {sidebarItems.map(({ note, score }) => (
                 <li
                   key={note.id}
-                  className={cn('group relative border-b', selectedId === note.id && 'bg-muted')}
+                  className={cn('group relative overflow-hidden border-b', selectedId === note.id && 'bg-muted')}
                 >
                   {/* Selection area — full-width button, right-padded to clear delete button */}
                   <button
