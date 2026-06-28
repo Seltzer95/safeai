@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 560" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs>
+    <style>
+      .title { font-size: 13px; font-weight: 700; fill: #0f172a; }
+      .sub { font-size: 11px; fill: #475569; }
+      .lbl { font-size: 11px; font-weight: 600; fill: #1e293b; }
+      .pill { font-size: 10px; fill: #475569; }
+      .edge { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+      .edgelbl { font-size: 9.5px; fill: #64748b; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="860" height="560" fill="#ffffff"/>
+
+  <!-- BROWSER boundary -->
+  <rect x="20" y="56" width="560" height="484" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="40" y="82" class="title">Browser (client) — all AI runs here, no server</text>
+  <text x="40" y="99" class="sub">Your notes and the model never leave the device</text>
+
+  <!-- Main thread / UI -->
+  <rect x="44" y="120" width="248" height="180" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="60" y="144" class="lbl">Main thread — UI</text>
+  <text x="60" y="163" class="sub">TanStack Start (React + Vite, SPA)</text>
+  <rect x="60" y="178" width="216" height="26" rx="6" fill="#eef2ff" stroke="#c7d2fe"/>
+  <text x="70" y="195" class="pill">Notes editor · sidebar · search box</text>
+  <rect x="60" y="210" width="216" height="26" rx="6" fill="#eef2ff" stroke="#c7d2fe"/>
+  <text x="70" y="227" class="pill">Semantic search results + relevance %</text>
+  <rect x="60" y="242" width="216" height="26" rx="6" fill="#eef2ff" stroke="#c7d2fe"/>
+  <text x="70" y="259" class="pill">Related notes · Tailwind v4 + shadcn/ui</text>
+  <text x="60" y="288" class="sub" font-style="italic">Never touches the model directly</text>
+
+  <!-- Web Worker -->
+  <rect x="308" y="120" width="248" height="180" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="324" y="144" class="lbl">Web Worker — inference</text>
+  <text x="324" y="163" class="sub">transformers.js v4 (off main thread)</text>
+  <rect x="324" y="178" width="216" height="26" rx="6" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="334" y="195" class="pill">WebGPU backend  →  WASM fallback</text>
+  <rect x="324" y="210" width="216" height="26" rx="6" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="334" y="227" class="pill">all-MiniLM-L6-v2 (q8) → embeddings</text>
+  <rect x="324" y="242" width="216" height="26" rx="6" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="334" y="259" class="pill">cosine similarity · ranking</text>
+  <text x="324" y="288" class="sub" font-style="italic">UI ↔ worker via Comlink / postMessage</text>
+
+  <!-- Storage -->
+  <rect x="44" y="320" width="248" height="92" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="60" y="344" class="lbl">Persistence</text>
+  <rect x="60" y="356" width="216" height="26" rx="6" fill="#fef3c7" stroke="#fde68a"/>
+  <text x="70" y="373" class="pill">IndexedDB — notes + stored embeddings</text>
+  <text x="60" y="400" class="sub">local-first; survives refresh, offline</text>
+
+  <!-- Static assets served -->
+  <rect x="308" y="320" width="248" height="92" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="324" y="344" class="lbl">Served static assets</text>
+  <rect x="324" y="356" width="216" height="26" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="334" y="373" class="pill">/models — quantized .onnx + tokenizer</text>
+  <text x="324" y="400" class="sub">downloaded once, then browser-cached</text>
+
+  <!-- Edges within browser -->
+  <line x1="292" y1="200" x2="308" y2="200" class="edge" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+  <line x1="168" y1="300" x2="168" y2="320" class="edge" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+  <line x1="432" y1="300" x2="432" y2="320" class="edge" marker-end="url(#arrow)"/>
+  <text x="436" y="314" class="edgelbl">loads model</text>
+
+  <!-- Hosting -->
+  <rect x="610" y="120" width="228" height="118" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="626" y="144" class="lbl">Cloudflare Pages</text>
+  <text x="626" y="163" class="sub">Static SPA hosting (no server / Worker)</text>
+  <rect x="626" y="178" width="196" height="22" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="636" y="193" class="pill">serves shell + assets + /models</text>
+  <rect x="626" y="206" width="196" height="22" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="636" y="221" class="pill">COOP/COEP headers (WebGPU)</text>
+
+  <!-- Build pipeline -->
+  <rect x="610" y="258" width="228" height="158" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="626" y="282" class="lbl">Offline build pipeline</text>
+  <text x="626" y="300" class="sub">Run once, ahead of time</text>
+  <rect x="626" y="314" width="196" height="22" rx="6" fill="#fdf2f8" stroke="#fbcfe8"/>
+  <text x="636" y="329" class="pill">Python · Optimum / ONNX export</text>
+  <rect x="626" y="342" width="196" height="22" rx="6" fill="#fdf2f8" stroke="#fbcfe8"/>
+  <text x="636" y="357" class="pill">quantize → q8 / q4 + validate</text>
+  <rect x="626" y="370" width="196" height="22" rx="6" fill="#fdf2f8" stroke="#fbcfe8"/>
+  <text x="636" y="385" class="pill">outputs browser-ready model</text>
+
+  <!-- Edges browser <-> hosting -->
+  <line x1="580" y1="366" x2="610" y2="366" class="edge" marker-end="url(#arrow)"/>
+  <text x="556" y="436" class="edgelbl" text-anchor="middle">pipeline output → /models (committed, deployed)</text>
+  <path d="M 724 416 C 724 470, 300 470, 300 412" class="edge" marker-end="url(#arrow)"/>
+
+  <line x1="610" y1="180" x2="556" y2="200" class="edge" marker-end="url(#arrow)"/>
+  <text x="600" y="175" class="edgelbl" text-anchor="middle">first load: HTML, JS, model files</text>
+
+  <!-- Footer note -->
+  <text x="20" y="556" class="sub">SafeAI Notes — system architecture. Request flow at runtime stays entirely client-side; the only network use is the one-time download of static assets.</text>
+</svg>
