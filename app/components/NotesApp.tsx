@@ -184,15 +184,14 @@ export function NotesApp() {
     setSaveStatus('saved')
   }
 
-  const handleDelete = async (id: string, e: React.MouseEvent): Promise<void> => {
-    e.stopPropagation()
-    if (selectedId === id) {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-      pendingRef.current = null
-      setSelectedId(null)
-      setLocalTitle('')
-      setLocalBody('')
-    }
+  const handleDeleteCurrent = async (): Promise<void> => {
+    if (!selectedId) return
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    pendingRef.current = null
+    const id = selectedId
+    setSelectedId(null)
+    setLocalTitle('')
+    setLocalBody('')
     await deleteNote(id)
   }
 
@@ -338,16 +337,15 @@ export function NotesApp() {
             </div>
           ) : (
             <ul className="w-full">
-              {sidebarItems.map(({ note, score }) => (
+              {sidebarItems.map(({ note }) => (
                 <li
                   key={note.id}
-                  className={cn('group relative overflow-hidden border-b', selectedId === note.id && 'bg-muted')}
+                  className={cn('border-b', selectedId === note.id && 'bg-muted')}
                 >
-                  {/* Selection area — full-width button, right-padded to clear delete button */}
                   <button
                     type="button"
                     onClick={() => void selectNote(note)}
-                    className="w-full cursor-pointer px-4 py-3 pr-10 text-left transition-colors hover:bg-muted/50"
+                    className="w-full cursor-pointer px-4 py-3 text-left transition-colors hover:bg-muted/50"
                   >
                     <div className="flex min-w-0 items-center gap-1.5">
                       <span className="min-w-0 flex-1 truncate text-sm font-medium">
@@ -356,30 +354,14 @@ export function NotesApp() {
                       {embeddingIds.has(note.id) && (
                         <Loader2Icon className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" />
                       )}
-                      {score !== undefined && (
-                        <Badge variant="outline" className="shrink-0 px-1 py-0 text-xs font-normal">
-                          {Math.round(score * 100)}%
-                        </Badge>
-                      )}
                     </div>
                     <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                       {snippet(note.body)}
                     </p>
-                    {score === undefined && (
-                      <p className="mt-1 text-xs text-muted-foreground/50">
-                        {formatRelativeTime(note.updatedAt)}
-                      </p>
-                    )}
+                    <p className="mt-1 text-xs text-muted-foreground/50">
+                      {formatRelativeTime(note.updatedAt)}
+                    </p>
                   </button>
-                  {/* Delete button — absolutely positioned, sibling to the select button */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-2 h-6 w-6 shrink-0 opacity-40 transition-opacity group-hover:opacity-100"
-                    onClick={(e) => void handleDelete(note.id, e)}
-                  >
-                    <Trash2Icon className="h-3.5 w-3.5" />
-                  </Button>
                 </li>
               ))}
             </ul>
@@ -424,7 +406,7 @@ export function NotesApp() {
                 {saveStatus === 'saved' && 'Saved'}
               </span>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 {modelStatus === 'loading' && (
                   <Badge variant="secondary" className="gap-1 text-xs">
                     <Loader2Icon className="h-3 w-3 animate-spin" />
@@ -437,6 +419,15 @@ export function NotesApp() {
                     Model error
                   </Badge>
                 )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => void handleDeleteCurrent()}
+                >
+                  <Trash2Icon className="h-3.5 w-3.5" />
+                  Delete
+                </Button>
               </div>
             </div>
 
